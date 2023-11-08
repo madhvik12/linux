@@ -1,0 +1,117 @@
+#!/bin/bash
+
+# Function to display the manual page
+show_manual() {
+    echo "internsctl(1) - Custom Linux Command"
+    echo
+    echo "NAME"
+    echo "  internsctl - A custom Linux command for various operations"
+    echo
+    echo "SYNOPSIS"
+    echo "  internsctl [options] <command> [args]"
+    echo
+    echo "DESCRIPTION"
+    echo "  internsctl is a custom Linux command that provides various operations on the system."
+    echo "  The available commands are:"
+    echo "    cpu       Get CPU information"
+    echo "    memory    Get memory information"
+    echo "    user      Manage users"
+    echo "    file      Get information about a file"
+    echo
+    echo "OPTIONS"
+    echo "  --version  Show the command version"
+    echo "  --help     Show usage and examples"
+    echo
+    echo "For detailed information on each command, use 'internsctl <command> --help'."
+}
+
+# Function to display help for each command
+show_command_help() {
+    case "$1" in
+        cpu)
+            echo "Usage: internsctl cpu getinfo"
+            echo "Get CPU information. Equivalent to 'lscpu'."
+            ;;
+        memory)
+            echo "Usage: internsctl memory getinfo"
+            echo "Get memory information. Equivalent to 'free'."
+            ;;
+        user)
+            echo "Usage: internsctl user create <username>"
+            echo "Create a new user and home directory."
+            echo
+            echo "Usage: internsctl user list [--sudo-only]"
+            echo "List regular users or users with sudo permissions."
+            ;;
+        file)
+            echo "Usage: internsctl file getinfo [options] <file-name>"
+            echo "Get information about a file."
+            echo "Options:"
+            echo "  --size, -s         Print file size"
+            echo "  --permissions, -p  Print file permissions"
+            echo "  --owner, -o        Print file owner"
+            echo "  --last-modified, -m Print last modified time"
+            ;;
+        *)
+            echo "Unknown command: $1"
+            show_manual
+            ;;
+    esac
+}
+
+# Function to display the command version
+show_version() {
+    echo "internsctl v0.1.0"
+}
+
+# Main script logic
+if [ "$1" == "--help" ]; then
+    show_manual
+elif [ "$1" == "--version" ]; then
+    show_version
+elif [ "$1" == "cpu" ] && [ "$2" == "getinfo" ]; then
+    lscpu
+elif [ "$1" == "memory" ] && [ "$2" == "getinfo" ]; then
+    free
+elif [ "$1" == "user" ]; then
+    if [ "$2" == "create" ]; then
+        if [ -z "$3" ]; then
+            echo "Error: Please provide a username."
+        else
+            sudo useradd -m "$3"
+        fi
+    elif [ "$2" == "list" ]; then
+        if [ "$3" == "--sudo-only" ]; then
+            getent passwd | cut -d: -f1,3 | while IFS= read -r line; do
+                username=$(echo "$line" | cut -d: -f1)
+                uid=$(echo "$line" | cut -d: -f2)
+                if [ "$uid" -eq 0 ]; then
+                    echo "$username (sudo)"
+                fi
+            done
+        else
+            getent passwd | cut -d: -f1
+        fi
+    else
+        show_command_help "user"
+    fi
+elif [ "$1" == "file" ] && [ "$2" == "getinfo" ]; then
+    if [ -z "$3" ]; then
+        echo "Error: Please provide a file name."
+    else
+        file="$3"
+        if [ "$4" == "--size" ] || [ "$4" == "-s" ]; then
+            stat -c %s "$file"
+        elif [ "$4" == "--permissions" ] || [ "$4" == "-p" ]; then
+            stat -c %A "$file"
+        elif [ "$4" == "--owner" ] || [ "$4" == "-o" ]; then
+            stat -c %U "$file"
+        elif [ "$4" == "--last-modified" ] || [ "$4" == "-m" ]; then
+            stat -c %y "$file"
+        else
+            stat "$file"
+        fi
+    fi
+else
+    show_manual
+fi
